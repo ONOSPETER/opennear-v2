@@ -2,7 +2,7 @@ import solc from 'solc';import fs from 'fs';import {createWalletClient,createPub
 import {C} from '../server/config.js';import {minterAddress} from '../server/chain.js';
 if(!C.vault||!C.key||!process.env.DEPLOYER_PRIVATE_KEY){console.log('Set VAULT_ACCOUNT_ID, VAULT_PRIVATE_KEY and DEPLOYER_PRIVATE_KEY (0x...) first.');process.exit(1)}
 const imp=p=>{try{return{contents:fs.readFileSync('node_modules/'+p,'utf8')}}catch{return{error:'not found'}}};
-const out=JSON.parse(solc.compile(JSON.stringify({language:'Solidity',sources:{'W.sol':{content:fs.readFileSync('contracts/OpenNearWrapper.sol','utf8')}},settings:{optimizer:{enabled:true,runs:200},outputSelection:{'*':{'*':['abi','evm.bytecode.object']}}}}),{import:imp}));
+const out=JSON.parse(solc.compile(JSON.stringify({language:'Solidity',sources:{'W.sol':{content:fs.readFileSync('contracts/OpenNearWrapper.sol','utf8')}},settings:{evmVersion:'cancun',optimizer:{enabled:true,runs:200},outputSelection:{'*':{'*':['abi','evm.bytecode.object']}}}}),{import:imp}));
 if(out.errors?.some(e=>e.severity==='error'))throw new Error(out.errors.map(e=>e.formattedMessage).join('\n'));
 const art=out.contracts['W.sol'].OpenNearWrapper,acc=privateKeyToAccount(process.env.DEPLOYER_PRIVATE_KEY);
 const pc=createPublicClient({chain:C.chain,transport:http(C.baseRpc)}),wc=createWalletClient({account:acc,chain:C.chain,transport:http(C.baseRpc)});

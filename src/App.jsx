@@ -2,6 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { setupWalletSelector } from '@near-wallet-selector/core';
 import { setupModal } from '@near-wallet-selector/modal-ui';
 import { setupMyNearWallet } from '@near-wallet-selector/my-near-wallet';
+import { setupMeteorWallet } from '@near-wallet-selector/meteor-wallet';
+import { setupHereWallet } from '@near-wallet-selector/here-wallet';
+import { setupHotWallet } from '@near-wallet-selector/hot-wallet';
+import { setupNightly } from '@near-wallet-selector/nightly';
 import '@near-wallet-selector/modal-ui/styles.css';
 import './styles.css';
 import { encodeFunctionData, parseAbi } from 'viem';
@@ -81,7 +85,7 @@ export default function App() {
   }, [contractLookup]);
 
   useEffect(() => {
-    api('/config').then(cfg => { setConfig(cfg); return setupWalletSelector({ network: cfg.network, modules: [setupMyNearWallet()] }); })
+    api('/config').then(cfg => { setConfig(cfg); return setupWalletSelector({ network: cfg.network, modules: [setupMeteorWallet(), setupHereWallet(), setupHotWallet(), setupNightly(), setupMyNearWallet()] }); })
       .then(walletSelector => {
         setSelector(walletSelector);
         const first = walletSelector.store.getState().accounts[0];
@@ -203,7 +207,7 @@ export default function App() {
   const mintTest = async () => {
     try {
       const wallet = await selector.wallet();
-      await wallet.signAndSendTransaction({ receiverId: 'nft.examples.testnet', actions: [{ type: 'FunctionCall', params: { methodName: 'nft_mint', args: { token_id: `opennear-${Date.now()}`, receiver_id: account, token_metadata: { title: 'OpenNear Test NFT', description: 'Free testnet NFT for bridge testing' } }, gas: '30000000000000', deposit: '100000000000000000000000' } }] });
+      await wallet.signAndSendTransaction({ receiverId: 'nft.examples.testnet', actions: [{ type: 'FunctionCall', params: { methodName: 'nft_mint', args: { token_id: `opennear-${Date.now()}`, receiver_id: account, metadata: { title: 'OpenNear Test NFT', description: 'Free testnet NFT for bridge testing', media: 'https://bafybeidl4hjbpdr6u6xvlrizwxbrfcyqurzvcnn5xoilmcqbxfbdwrmp5m.ipfs.dweb.link/', copies: 1 } }, gas: '30000000000000', deposit: '100000000000000000000000' } }] });
     } catch (error) { notify(error.message); }
   };
   const connect = () => selector ? setupModal(selector, {}).show() : notify('Wallet is loading…');
