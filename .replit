@@ -3,6 +3,10 @@ entrypoint = "server/index.js"
 modules = ["nodejs-20"]
 
 [[ports]]
+localPort = 3000
+externalPort = 3001
+
+[[ports]]
 localPort = 5000
 externalPort = 80
 
@@ -33,3 +37,11 @@ waitForPort = 5000
 
 [workflows.workflow.metadata]
 outputType = "webview"
+
+[userenv]
+
+[userenv.shared]
+
+[deployment]
+deploymentTarget = "cloudrun"
+run = "npm start"
