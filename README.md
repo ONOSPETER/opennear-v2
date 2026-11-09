@@ -1,32 +1,44 @@
-# OpenNear: NEAR NFT to Base (OpenSea) bridge
+# OpenNear: bridge NEAR NFTs to Base and OpenSea
 
-NEAR NFT → **vault account** (you control) → wrapped ERC-721 minted on Base by an **MPC-derived address** (Chain Signatures) → OpenSea. Burn on Base → vault sends the original to the NEAR account named in the burn.
+Built for NEAR HACKATHON. Tracks: NFTs That Do Something (`nfts`), Open Innovation (`open`).
 
-## Who owns the vault / what contracts exist
-- **Vault** = a normal NEAR account you create. Its private key (`VAULT_PRIVATE_KEY`) lives in Replit Secrets. **You (the operator) control escrowed NFTs: this is custodial.** Use a dedicated account, never a personal one.
-- **Minter** = an EVM address derived from the vault by the NEAR MPC contract. Nobody holds its private key; the vault asks MPC to sign. It needs a little ETH for gas.
-- **One contract to deploy**: `contracts/OpenNearWrapper.sol` on Base. No NEAR contract is needed. Chain Signatures (`v1.signer-prod.testnet` / `v1.signer`) is already deployed by NEAR.
+**Problem:** NEP-171 NFTs cannot be listed on OpenSea. **Product:** OpenNear locks a NEAR NFT in a vault, mints a wrapped ERC-721 on Base using NEAR Chain Signatures, and returns the original when the wrapper is burned.
 
-## Demo mode
-The app is in DEMO mode until `VAULT_ACCOUNT_ID`, `VAULT_PRIVATE_KEY` and the wrapper address exist. In demo mode nothing is sent on-chain and the wallet is never asked to transfer an NFT.
+- Live demo: https://opennear-v-2-zip--afpatrick042.replit.app/ (NEAR testnet + Base Sepolia)
+- Demo video: https://youtu.be/h0S-RpbOAQw
+- Demo post: <DEMO POST LINK>
 
-## Setup on testnet (do this first)
-1. `npm install`
-2. Create a testnet vault: go to https://wallet.testnet.near.org or use any testnet wallet, create `yourname-vault.testnet`, fund it from a faucet (~2 NEAR), and export its full-access private key (`ed25519:...`).
-3. Replit Secrets: `NETWORK=testnet`, `VAULT_ACCOUNT_ID`, `VAULT_PRIVATE_KEY`.
-4. `npm run derive` prints the **Minter** address. Send it ~0.002 Base Sepolia ETH (any Base Sepolia faucet).
-5. Make a throwaway EVM wallet, fund it with ~0.01 Base Sepolia ETH, and add its key as secret `DEPLOYER_PRIVATE_KEY` (0x...).
-6. `npm run deploy:wrapper` compiles and deploys, then saves `deployment.testnet.json`. The server reads it automatically (or set `WRAPPER_ADDRESS`). Delete `DEPLOYER_PRIVATE_KEY` afterwards.
-7. `npm run check` must print OK on every line. The same data is at `/api/health`.
-8. Restart (Run). The banner should say Testnet, not Demo.
-9. In the app: connect a testnet NEAR wallet, press **Mint a free test NFT** (or paste any testnet NFT contract), bridge it to your Base Sepolia address, and open it on testnets.opensea.io.
-10. Reverse: press the return icon on the order, MetaMask burns it on Base Sepolia (`redeem(id, nearAccount)`), the server sees `redeemedTo` within ~30s and sends the NFT to that NEAR account.
+## Proof it works (testnet)
+- Wrapper contract (Base Sepolia): 0xaabA52D3468069E5BA931F6C0Fc856eAffa8531F
+- Bridged NFT: https://base-sepolia.blockscout.com/token/0xaabA52D3468069E5BA931F6C0Fc856eAffa8531F/instance/23813822502009475005602415043731090377673287000861627155614916082383705725787
+- Mint tx on Base Sepolia: https://base-sepolia.blockscout.com/tx/0x0a400f5232201892fb34631a1f622a6ab6743f5036409e78cffc03a5b5aad385
+- Deposit tx on NEAR testnet: https://testnet.nearblocks.io/txns/7ZPrxwnzfNxNVyRybhiQSTnRr5AHUoZjsd5hMzC2nsLp
 
-## Mainnet
-Repeat with `NETWORK=mainnet`, a mainnet vault, real ETH on Base, and a new deploy (`deployment.mainnet.json`). Test small first.
+## How NEAR is used
+- NEP-171: read a user's NFTs and send `nft_transfer` to the vault with the order ID in `memo`.
+- Chain Signatures (`v1.signer-prod.testnet`): the vault asks the MPC contract to sign a Base transaction. The minter address is derived from the vault, so no one holds its private key.
+- NEAR Wallet Selector: Meteor, HERE, HOT, Nightly, MyNearWallet.
+- NEAR RPC and NearBlocks for reads and transaction verification.
 
-## Security notes
-- The server only mints after verifying the NEAR deposit transaction: signer = order owner, receiver = the NFT contract, `nft_transfer` to the vault with `memo` = order id.
-- Release goes to the NEAR account written on-chain by whoever burned the wrapper, so a buyer on OpenSea can redeem.
-- Orders live in `data.json`. Replit Deployments can reset files; use a database before real volume.
-- Unverified by me: live Chain Signatures calls (`sign` payload format) and the testnet mint button. If `npm run check` or a mint fails, send me the output.
+## Try it (about 5 minutes, no setup)
+1. Open the demo. See the "Testnet" banner.
+2. Connect a NEAR **testnet** wallet (Meteor with Testnet selected). See your account name.
+3. Press "Mint a free test NFT" and approve. See the NFT in the list (or paste `nft.examples.testnet` in "Add NFT contract").
+4. Enter a Base Sepolia address, press "Bridge to Base", approve the NEAR transfer. See the status go to "Live on Base".
+5. Open the order's explorer link. See a wrapped ERC-721 owned by your address.
+6. Press the return button. A wallet burns the wrapper with `redeem(id, nearAccount)`. Within about 30 s the NFT returns to your NEAR account.
+
+## Run locally
+`npm install`, set `NETWORK=testnet`, `VAULT_ACCOUNT_ID`, `VAULT_PRIVATE_KEY` (see `.env.example`), run `npm run derive`, fund the printed minter with Base Sepolia ETH, run `npm run deploy:wrapper` (needs `DEPLOYER_PRIVATE_KEY`), then `npm run check` and `npm start`. Without secrets the app starts in demo mode and sends nothing on-chain.
+
+## Architecture
+`src/` React + Vite UI. `server/` Express API: order state machine, NEAR deposit verification (signer, contract, token, vault, memo), MPC signing and Base mint, redeem watcher. `contracts/OpenNearWrapper.sol` wrapped ERC-721, only the derived minter can mint, the holder burns with `redeem(id, nearAccount)`.
+
+## Limits
+Testnet only. The vault is custodial (whoever holds its key controls escrowed NFTs). Orders are stored in `data.json`. Not audited. Planned: NEAR Intents for best-price selling, function-call keys, a NEAR-side contract, Seaport listing.
+
+## Libraries and AI use
+React, Vite, Express, viem, near-api-js, NEAR Wallet Selector, OpenZeppelin Contracts, solc. Parts of the code were written with AI assistance (Claude).
+
+## License
+MIT
