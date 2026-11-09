@@ -1,5 +1,9 @@
 # OpenNear: NEAR NFT to Base (OpenSea) bridge
 
+full app demo: https://opennear-v-2-zip--afpatrick042.replit.app/
+
+YouTube explainer video: https://youtu.be/h0S-RpbOAQw?si=o2f71rX9vmlxMSf0
+
 NEAR NFT → **vault account** (you control) → wrapped ERC-721 minted on Base by an **MPC-derived address** (Chain Signatures) → OpenSea. Burn on Base → vault sends the original to the NEAR account named in the burn.
 
 ## Who owns the vault / what contracts exist
